@@ -8,3 +8,6 @@ def epanechnikov(dist: float, c: float = 25):
 
 def tri_cube(dist: float, c: float = 25):
     return c * max((1 - dist / c) ** 3, 0)
+
+def mean(__iterable):
+    return sum(__iterable) / len(__iterable)

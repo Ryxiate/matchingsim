@@ -29,6 +29,7 @@ class geo_3dsr(object):
         if resample_noise:
             if asymmetric_noise:
                 self._noise_matrix = np.random.normal(loc=0, scale=noise, size=(self.n_agents, self.n_agents))
+                self._noise_matrix -= np.diag(self._noise_matrix.diagonal())
             else:
                 self._noise_matrix = np.triu(np.random.normal(loc=0, scale=noise, size=(self.n_agents, self.n_agents)))
                 self._noise_matrix += self._noise_matrix.T - 2 * np.diag(self._noise_matrix.diagonal())
@@ -38,6 +39,7 @@ class geo_3dsr(object):
                 u = kernel_func(np.linalg.norm(self._factors[i] - self._factors[j]), c=c)
                 self._utility_matrix[i, j] = u 
                 self._utility_matrix[j, i] = u
+        self._revealed_utilities = self._utility_matrix + self._noise_matrix
                 
         if np.linalg.norm(self._utility_matrix - np.abs(self._noise_matrix)) <= self.n_agents * noise and not quiet and resample_noise:
             warnings.warn("Parameter c and noise inappropriately set. The utility may be too small for noise.")
@@ -63,10 +65,14 @@ class geo_3dsr(object):
         return np.maximum(self._utility_matrix + self._noise_matrix, 0)
     
     @property
-    def factors(self):
-        return self._factors
+    def revealed_utilities(self):
+        return np.maximum(self._revealed_utilities, 0)
     
-    def factor_bias(self, bias_num: int = 1, bias_scale: int = 4, no_update: bool = True):
+    @property
+    def factors(self):
+        return self._factors.copy()
+    
+    def factor_bias(self, bias_num: int = 1, bias_scale: int = 5, no_update: bool = True):
         '''Apply a random bias on a random factor for the Geo 3D-SR instance
         :param bias_num: number of factors affected by the bias
         :param bias_scale: maximum bias (can be negative for negative bias)
@@ -78,6 +84,26 @@ class geo_3dsr(object):
         self._factors = np.maximum(np.minimum(self._factors, self._h), 0)
         if not no_update:
             self._update_utilities(kernel_func=self._kernel_func, c=self.c, noise=self.noise, quiet=self.quiet, resample_noise=False)
+            
+    def utilities_dropout(self, p: float = 0.6, proportion: float = 1.0, policy: str = "mean"):
+        '''Randomly drop out utilities to represent indifference caused by agent's incomplete information on others
+        :param p: probability of agents whose utilities will be dropped
+        :param proportion: proportion of utilities of the 'drop-out' agents to another agent that will be dropped
+        :param policy: can be in [`"mean"`, `"min"`, "max"`]
+        '''
+        p = min(1, max(0, p))
+        proportion = min(1, max(0, proportion))
+        if policy not in ["mean", "min", "max"]:
+            raise Exception("policy should be in ['mean', 'min', 'max']")
+        policy = eval(policy)
+        
+        drop_agents = np.array(range(self.n_agents))[[random.random() < p for _ in range(self.n_agents)]]
+        for agent in drop_agents:
+            rem_agents = [a for a in range(self.n_agents) if a != agent]
+            drop_uts = random.sample(rem_agents, int(len(rem_agents) * proportion))
+            indiff_ut = policy(self._revealed_utilities[agent, drop_uts])
+            for a in drop_uts:
+                self._revealed_utilities[agent, a] = indiff_ut
     
     def __repr__(self):
         return f"3SR Instance with {self.n_agents} agents"

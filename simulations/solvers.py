@@ -5,6 +5,7 @@ import random
 class solver_base(object):
     def __init__(self, inst: geo_3dsr):
         self.utilities = inst.utilities
+        self.revealed = inst.revealed_utilities
         self.factors = inst.factors
         self.n_agents = inst.n_agents
         self.n_rooms = self.n_agents / 3
@@ -20,7 +21,7 @@ class solver_base(object):
         
     @property
     def solution(self):
-        return self._solution
+        return self._solution.copy()
     
     def _solve(self):
         raise NotImplementedError
@@ -40,7 +41,7 @@ class solver_base(object):
             
     def evaluate(self, verbose: int = 0):
         if any([len(self._solution[r]) != 3 for r in range(self.n_rooms)]):
-            raise Exception("Solution empty or incomplete. Consider running the reset and solve method first.")
+            raise Exception("Solution empty or incomplete. Consider running the solve method first.")
         room_utilities = np.zeros(self.n_rooms)
         for r in range(self.n_rooms):
             (i, j, k) = self._solution[r]
@@ -53,7 +54,7 @@ class solver_base(object):
         
     def evaluate_agentwise(self) -> np.ndarray:
         if any([len(self._solution[r]) != 3 for r in range(self.n_rooms)]):
-            raise Exception("Solution empty or incomplete. Consider running the reset and solve method first.")
+            raise Exception("Solution empty or incomplete. Consider running the solve method first.")
         agent_utilities = np.zeros(self.n_agents)
         for r in range(self.n_rooms):
             (i, j, k) = self._solution[r]
@@ -72,21 +73,84 @@ class solver_base(object):
             print("Total utilitarian welfare:", total)
         
     
-class serial_dictatorship(solver_base):
+class room_serial_dictatorship(solver_base):
+    '''Agents will iteratively choose the rooms they prefer. 
+    
+    If a room isn't full when they join, they will evaluate the vacancies based on the average utilities of the remaining agents
+    '''
     def _solve(self):
         for i in range(self.n_agents):
             remain_num = self.n_agents - i - 1
             if remain_num:
-                remain_ut_avg = sum(self.utilities[i, i+1:]) / remain_num
-                room_utilities = [sum([self.utilities[i, x] for x in self._solution[r]]) + remain_ut_avg * (2 - len(self._solution[r])) if len(self._solution[r]) < 3 
+                remain_ut_avg = sum(self.revealed[i, i+1:]) / remain_num
+                room_utilities = [sum([self.revealed[i, x] for x in self._solution[r]]) + remain_ut_avg * (2 - len(self._solution[r])) if len(self._solution[r]) < 3 
                                   else -1 for r in range(self.n_rooms)]
                 room_assign = np.argmax(room_utilities)
             else:
                 room_assign = np.argmin([len(self._solution[r]) for r in range(self.n_rooms)])
             self._solution[room_assign].add(i)
-            
 
+
+class serial_dictatorship(solver_base):
+    '''Agents will choose between a room with 2 people to join, or start a new room with their favorite agent who hasn't been in a room.
+    
+    Theoretical analysis shows the produced results are efficient.
+    '''
+    def _solve(self):
+        agent_list = list(range(self.n_agents))
+        occupied_room = 0
+        while True:
+            a = agent_list[0]
+            agent_list.remove(a)
+            ut_rooms = [sum([self.revealed[a, i] for i in self._solution[r]]) if len(self._solution[r]) == 2 else -1 for r in range(self.n_rooms)]
+            fav_room = np.argmax(ut_rooms)
+            if occupied_room < self.n_rooms:
+                ut_agents = self.revealed[a, agent_list]
+                fav_agent = agent_list[np.argmax(ut_agents)]
+                ut_rem = np.delete(ut_agents, np.argmax(ut_agents)).mean()
+                if ut_rooms[fav_room] > self.revealed[a, fav_agent] + ut_rem:
+                    self._solution[fav_room].add(a)
+                else:
+                    self._solution[occupied_room] = set([a, fav_agent])
+                    agent_list.remove(fav_agent)
+                    occupied_room += 1
+            else:
+                self._solution[fav_room].add(a)
+                if not len(agent_list): break
+
+
+class random_serial_dictatorship(solver_base):
+    '''
+    Like serial dictatorship, but the ordering of agents' deciding is randomized
+    '''
+    def _solve(self):
+        agent_list = list(range(self.n_agents))
+        occupied_room = 0
+        while True:
+            a = random.sample(agent_list, 1)[0]
+            agent_list.remove(a)
+            ut_rooms = [sum([self.revealed[a, i] for i in self._solution[r]]) if len(self._solution[r]) == 2 else -1 for r in range(self.n_rooms)]
+            fav_room = np.argmax(ut_rooms)
+            if occupied_room < self.n_rooms:
+                ut_agents = self.revealed[a, agent_list]
+                fav_agent = agent_list[np.argmax(ut_agents)]
+                ut_rem = np.delete(ut_agents, np.argmax(ut_agents)).mean()
+                if ut_rooms[fav_room] > self.revealed[a, fav_agent] + ut_rem:
+                    self._solution[fav_room].add(a)
+                else:
+                    self._solution[occupied_room] = set([a, fav_agent])
+                    agent_list.remove(fav_agent)
+                    occupied_room += 1
+            else:
+                self._solution[fav_room].add(a)
+                if not len(agent_list): break
+            
+            
 class match_by_characteristics(solver_base):
+    '''Greedy algorithm to provide a 2-stable approximation solution for Geometric 3D-SR
+    
+    Iteratively choose the 3 agents forming the least perimeter triangle in the factor space to be roommates
+    '''
     def _solve(self):
         ut_three = dict()
         for i in range(self.n_agents):
@@ -105,6 +169,10 @@ class match_by_characteristics(solver_base):
     
 
 class random_match(solver_base):
+    '''Dummy matching algorithm as the baseline
+    
+    Randomly match agents together as roommates
+    '''
     def _solve(self):
         agents = list(range(self.n_agents))
         r = 0
@@ -114,11 +182,6 @@ class random_match(solver_base):
                 agents.remove(i)
                 self._solution[r].add(i)
             r += 1
-            
-            
-class brute_force(solver_base):
-    def _solve(self):
-        pass
             
     
     
