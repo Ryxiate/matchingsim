@@ -4,6 +4,12 @@ import random
 from .utils import *
 
 def generate_factors(rooms: int = 10, n_factors: int = 5, high: int = 7) -> np.ndarray:
+    '''Generate integer value factors in a np.ndarray
+    :param rooms: number of rooms, the output shape is (3*rooms, n_factors)
+    :param n_factor: number of factors to generate
+    :param high: highest value a factor can take (i.e. factors take values in [1, high])
+    :return: factors matrix with shape (3*rooms, n_factors)
+    '''
     return np.array([[np.random.randint(low=1, high=high+1) for _ in range(n_factors)] for __ in range(3*rooms)])
 
 class geo_3dsr(object):
@@ -101,7 +107,7 @@ class geo_3dsr(object):
         for agent in drop_agents:
             rem_agents = [a for a in range(self.n_agents) if a != agent]
             drop_uts = random.sample(rem_agents, int(len(rem_agents) * proportion))
-            indiff_ut = policy(self._revealed_utilities[agent, drop_uts])
+            indiff_ut = policy(self._revealed_utilities[agent, :])
             for a in drop_uts:
                 self._revealed_utilities[agent, a] = indiff_ut
     

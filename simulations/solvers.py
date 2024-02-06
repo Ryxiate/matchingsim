@@ -2,6 +2,12 @@ from .data import geo_3dsr
 import numpy as np
 import random
 
+def _pairwise_distances(factors: np.ndarray) -> np.ndarray:
+    dot_product = np.matmul(factors, factors.T)   
+    square_norm = np.diag(dot_product)
+    distances = np.maximum(np.expand_dims(square_norm, axis=1) - 2.0 * dot_product + np.expand_dims(square_norm, axis=0), 0)
+    return np.sqrt(distances)
+
 class solver_base(object):
     def __init__(self, inst: geo_3dsr):
         self.utilities = inst.utilities
@@ -74,7 +80,7 @@ class solver_base(object):
         
     
 class room_serial_dictatorship(solver_base):
-    '''Agents will iteratively choose the rooms they prefer. 
+    '''Agents will iteratively choose the room they prefer. 
     
     If a room isn't full when they join, they will evaluate the vacancies based on the average utilities of the remaining agents
     '''
@@ -152,12 +158,12 @@ class match_by_characteristics(solver_base):
     Iteratively choose the 3 agents forming the least perimeter triangle in the factor space to be roommates
     '''
     def _solve(self):
+        distances = _pairwise_distances(self.factors)
         ut_three = dict()
         for i in range(self.n_agents):
             for j in range(i+1, self.n_agents):
                 for k in range(j+1, self.n_agents):
-                    ut_three[(i, j, k)] = np.linalg.norm(self.factors[i] - self.factors[j]) + np.linalg.norm(self.factors[j] - self.factors[k]) \
-                                        + np.linalg.norm(self.factors[k] - self.factors[i])
+                    ut_three[(i, j, k)] = distances[i, j] + distances[j, k] + distances[k, i]
         r = 0
         while len(ut_three):
             (i, j, k) =  sorted(ut_three.keys(), key=lambda ky: ut_three[ky])[0]

@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
+import json
 
 warnings.filterwarnings("error")
 
@@ -10,21 +11,26 @@ warnings.filterwarnings("error")
 # - swap: top trading cycle
 
 if __name__ == "__main__":
-    iter_num = 100
-    # room_nums = [2, 5, 10, 15, 20, 30]
-    room_nums = [2, 5, 15, 20, 30, 50]
-    noise_list = [3, 10, 20]
-    init_noise = 3
-    (n_rows, n_cols) = (2, 3)
-    solver_list = ["serial_dictatorship", "random_serial_dictatorship", "match_by_characteristics", "random_match"]
+    # Load configurations
+    with open("./config.json", "r") as f:
+        config = json.load(f)
+
+    iter_num = config["SimulationOptions"]["iter_num"]
+    room_nums = config["SimulationOptions"]["room_nums"]
+    noise_list = config["SimulationOptions"]["noise_list"]
+    init_noise = config["SimulationOptions"]["init_noise"]
+    solver_list = config["SimulationOptions"]["solver_list"]
     
-    # Plotting options
-    save_not_show = True
-    dpi = 300
+    n_rows = config["GraphOptions"]["n_rows"]
+    n_cols = config["GraphOptions"]["n_cols"]
+    save_not_show = config["GraphOptions"]["save_not_show"]
+    dpi = config["GraphOptions"]["dpi"]
     
     if n_rows * n_cols != len(room_nums):
         raise Exception("Subplot arrangement have different size than the room number list")
     
+    # Step 1
+    # Default simulation
     results = {s: [] for s in solver_list}
     order_res = {s: {r: np.zeros((3 * r, )) for r in room_nums} for s in solver_list}
     hist_res = {s: {r: [] for r in room_nums} for s in solver_list}
@@ -94,6 +100,7 @@ if __name__ == "__main__":
         else:
             plt.show()
     
+    # Step 2
     # Under different noise
     # This is crap and inefficient. Fix this
     results = {n: {s: [] for s in solver_list} for n in noise_list}
@@ -132,6 +139,7 @@ if __name__ == "__main__":
     else:
         plt.show()
     
+    # Step 3
     # Under different data settings
     results = {i: {s: [] for s in solver_list} for i in range(4)}
     pbar = tqdm(total=4*iter_num*len(room_nums)*len(solver_list), desc="Matching rooms under different scenarios (Step 3/3)")
