@@ -4,7 +4,7 @@ import random
 from .utils import *
 
 def generate_factors(rooms: int = 10, n_factors: int = 5, high: int = 7) -> np.ndarray:
-    '''Generate integer value factors in a np.ndarray
+    '''Generates integer value factors in a np.ndarray
     :param rooms: number of rooms, the output shape is (3*rooms, n_factors)
     :param n_factor: number of factors to generate
     :param high: highest value a factor can take (i.e. factors take values in [1, high])
@@ -13,7 +13,16 @@ def generate_factors(rooms: int = 10, n_factors: int = 5, high: int = 7) -> np.n
     return np.array([[np.random.randint(low=1, high=high+1) for _ in range(n_factors)] for __ in range(3*rooms)])
 
 class geo_3dsr(object):
-    def __init__(self, factors: np.ndarray, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 1, quiet: bool = False, asymmetric_noise: bool = False):
+    '''A geometric 3D-SR instance with noise when calculating utilities
+    
+    A few things about utilities used in this class:
+    1. `_utility_matrix`: matrix of utilities directly computed from factors and kernel functions
+    2. `_revealed_utilities`: initially the `_utility_matrix` plus the `_noise_matrix`. Subject to change by methods like `utilities_dropout`
+    3. `utilities`: true utilities computed from `_utility_matrix + _noise_matrix`, used for evaluation
+    4. `revealed_utilities`: utilities that agents perceive before matching, used for matching
+    '''
+    def __init__(self, factors: np.ndarray, high: int, kernel: str, c: float, noise: float, pref_premium: float, p: float, lim_prop: float, 
+                 groups_p: float, groups_allowed: bool, quiet: bool, asymmetric_noise: bool):
         self._factors = factors
         self._h = high
         (self.n_agents, self.n_factors) = factors.shape
@@ -29,9 +38,36 @@ class geo_3dsr(object):
         else:
             raise Exception(f"Unrecognized kernel function: {kernel}")
 
-        self._update_utilities(kernel_func=self._kernel_func, c=self.c, noise=self.noise, quiet=self.quiet, asymmetric_noise=self.asy)
+        self._gen_preferences(p=p, lim_p=lim_prop, groups_allowed=groups_allowed, groups_p=groups_p)
+        self._update_utilities(kernel_func=self._kernel_func, c=self.c, noise=self.noise, quiet=self.quiet, resample_noise=True, asymmetric_noise=self.asy)
+        self._pref_premium = pref_premium * np.maximum(self._utility_matrix + self._noise_matrix, 0).sum() / (self.n_agents * (self.n_agents - 1))
     
-    def _update_utilities(self, kernel_func, c: float = 25, noise: float = 1, quiet: bool = False, resample_noise: bool = True, asymmetric_noise: bool = False):
+    def _gen_preferences(self, p: float, lim_p: float, groups_allowed: bool, groups_p: float):
+        lim_p = min(max(lim_p, 0), 1)
+        p = min(max(p, 0), 1)
+        
+        self._preferences: set[tuple] = set()
+        all_agents = list(range(self.n_agents))
+        while len(self._preferences) < self.n_agents / 3 * lim_p:
+            num = 3 if groups_allowed and random.random() <= groups_p else 2
+            pref_agents = random.sample(all_agents, num)
+            self._preferences.add(tuple(pref_agents))
+            for a in pref_agents:
+                all_agents.remove(a)
+            if random.random() > p:
+                break
+            
+        self._pref_matrix = np.zeros((self.n_agents, self.n_agents))
+        for agents in self._preferences:
+            self._pref_matrix[agents[0], agents[1]] = 1
+            self._pref_matrix[agents[1], agents[0]] = 1
+            if len(agents) == 3:
+                self._pref_matrix[agents[0], agents[2]] = 1
+                self._pref_matrix[agents[2], agents[0]] = 1
+                self._pref_matrix[agents[1], agents[2]] = 1
+                self._pref_matrix[agents[2], agents[1]] = 1
+    
+    def _update_utilities(self, kernel_func, c: float, noise: float, quiet: bool, resample_noise: bool, asymmetric_noise: bool):
         if resample_noise:
             if asymmetric_noise:
                 self._noise_matrix = np.random.normal(loc=0, scale=noise, size=(self.n_agents, self.n_agents))
@@ -49,37 +85,52 @@ class geo_3dsr(object):
                 
         if np.linalg.norm(self._utility_matrix - np.abs(self._noise_matrix)) <= self.n_agents * noise and not quiet and resample_noise:
             warnings.warn("Parameter c and noise inappropriately set. The utility may be too small for noise.")
+       
+    @property
+    def preferences(self):
+        return self._preferences.copy()
     
-    @classmethod       
-    def get_instance(cls, /, rooms: int = 10, n_factors: int = 5, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 1, quiet: bool = False, asymmetric_noise: bool = False):
-        '''Generate an instance of Geometric 3D-SR
-        :param rooms: number of rooms (there will be 3*rooms agents)
-        :param n_factors: number of factors
-        :param high: highest value of factors (1-high, integer value)
-        :param kernel: kernel function to transform the distance into utilities, chosen from [`"rbf"`, `"epanechnikov"`, `"tri_cube"`]
-        :param c: parameter for the kernel function
-        :param noise: Gaussian noise scale when calculating noise for utilities
-        :param quiet: If true, will not warn the user for inappropriately set parameters (noise and c)
-        :param asymmetric_noise: If true, the Gaussian noise will be asymmetric (e_{ij} != e_{ji})
-        :return: a geometric 3D-SR instance
-        '''
-        factors = generate_factors(rooms=rooms, n_factors=n_factors, high=high)
-        return cls(factors=factors, high=high, kernel=kernel, c=c, noise=noise, quiet=quiet, asymmetric_noise=asymmetric_noise)
+    @property
+    def preferences_matrix(self):
+        return self._pref_matrix.copy()
     
     @property
     def utilities(self):
-        return np.maximum(self._utility_matrix + self._noise_matrix, 0)
+        return np.maximum(self._utility_matrix + self._noise_matrix + self._pref_matrix * self._pref_premium, 0)
     
     @property
     def revealed_utilities(self):
-        return np.maximum(self._revealed_utilities, 0)
+        return np.maximum(self._revealed_utilities + self._pref_matrix * self._pref_premium, 0)
     
     @property
     def factors(self):
         return self._factors.copy()
     
+    @classmethod       
+    def get_instance(cls, /, rooms: int = 10, n_factors: int = 5, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 1, pref_premium: float = 0.5, 
+                     p: float = 0.7, lim_prop: float = 0.5, groups_allowed: bool = False, groups_p: float = 0.3, quiet: bool = False, asymmetric_noise: bool = False):
+        '''Generates an instance of Geometric 3D-SR
+        :param rooms: number of rooms (there will be 3*rooms agents)
+        :param n_factors: number of factors
+        :param high: highest value of factors ([1, high], integer value)
+        :param kernel: kernel function to transform the distance into utilities, chosen from [`"rbf"`, `"epanechnikov"`, `"tri_cube"`]
+        :param c: parameter for the kernel function
+        :param noise: Gaussian noise scale when calculating noise for utilities
+        :param pref_premium: preference premium markup on utilities based on the average utilities across all agents
+        :param p: probability of generating preferences
+        :param lim_prop: limits of proportion of people to have preferences
+        :param groups_allowed: whether to be able to generate a group (3-person) preferences
+        :param groups_p: probability of generating a group preferences. Ignored if `groups_allowed` is set to false
+        :param quiet: If true, will not warn the user for inappropriately set parameters (noise and c)
+        :param asymmetric_noise: If true, the Gaussian noise will be asymmetric (e_{ij} != e_{ji})
+        :return: a geometric 3D-SR instance
+        '''
+        factors = generate_factors(rooms=rooms, n_factors=n_factors, high=high)
+        return cls(factors=factors, high=high, kernel=kernel, c=c, noise=noise, quiet=quiet, asymmetric_noise=asymmetric_noise, pref_premium=pref_premium,
+                   p=p, lim_prop=lim_prop, groups_p=groups_p, groups_allowed=groups_allowed)
+    
     def factor_bias(self, bias_num: int = 1, bias_scale: int = 5, no_update: bool = True):
-        '''Apply a random bias on a random factor for the Geo 3D-SR instance
+        '''Applies a random bias on a random factor for the Geo 3D-SR instance
         :param bias_num: number of factors affected by the bias
         :param bias_scale: maximum bias (can be negative for negative bias)
         :param no_update: do not update the utilities after applying the bias
@@ -92,7 +143,7 @@ class geo_3dsr(object):
             self._update_utilities(kernel_func=self._kernel_func, c=self.c, noise=self.noise, quiet=self.quiet, resample_noise=False)
             
     def utilities_dropout(self, p: float = 0.6, proportion: float = 1.0, policy: str = "mean"):
-        '''Randomly drop out utilities to represent indifference caused by agent's incomplete information on others
+        '''Randomly drops out utilities to represent indifference caused by agent's incomplete information on others
         :param p: probability of agents whose utilities will be dropped
         :param proportion: proportion of utilities of the 'drop-out' agents to another agent that will be dropped
         :param policy: can be in [`"mean"`, `"min"`, "max"`]
@@ -112,7 +163,7 @@ class geo_3dsr(object):
                 self._revealed_utilities[agent, a] = indiff_ut
     
     def __repr__(self):
-        return f"3SR Instance with {self.n_agents} agents"
+        return f"3D-SR Instance with {self.n_agents} agents"
     
     
     

@@ -1,8 +1,29 @@
 from simulations import *
 
-ins = geo_3dsr.get_instance(rooms=2, kernel="tri_cube", asymmetric_noise=True)
-print(ins.factors)
-print(solvers._pairwise_distances(ins.factors))
+inst = geo_3dsr.get_instance(pref_premium=1, rooms=3, asymmetric_noise=True, groups_allowed=True, groups_p=1)
+# print(inst.utilities)
+solver = random_match(inst)
+solver.solve()
+print(inst.preferences)
+print(solver.evaluate())
+
+# swapper = preference_swapper.from_solver(solver)
+# print(swapper.utilities_after_swap())
+
+print(solver.utilities)
+print(solver.solution)
+
+evaluator = ttg_evaluator.from_solver(solver)
+print({u: [x[0] for x in l] for (u, l) in evaluator._build_trading_graph().items()})
+# evaluator._ttg = {0: [(1, 1)],
+#                   1: [(4, 1)],
+#                   2: [], 3: [],
+#                   4: [(1, 1)],
+#                   5: [], 6: [],
+#                   7: [], 8: []}
+print(evaluator._find_cycle())
+print(evaluator.evaluate())
+
 
 # print(ins.revealed_utilities)
 # ins.utilities_dropout(proportion=0.3, p=1)

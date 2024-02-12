@@ -1,4 +1,5 @@
 from .data import geo_3dsr
+from .utils import *
 import numpy as np
 import random
 
@@ -15,6 +16,7 @@ class solver_base(object):
         self.factors = inst.factors
         self.n_agents = inst.n_agents
         self.n_rooms = self.n_agents / 3
+        self.preferences = inst.preferences
         if self.n_rooms - int(self.n_rooms):
             raise Exception("3SR Problem instance has agent numbers not the multiple of 3")
         else:   self.n_rooms = int(self.n_rooms)
@@ -30,11 +32,12 @@ class solver_base(object):
         return self._solution.copy()
     
     def _solve(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"Solve method not supported for class {type(self).__name__}")
     
     def solve(self):
         self.reset()
         self._solve()
+        return self.solution
     
     def display_solution(self):
         for r in range(self.n_rooms):
@@ -45,18 +48,18 @@ class solver_base(object):
         self._solve()
         self.display_solution()
             
-    def evaluate(self, verbose: int = 0):
+    def evaluate(self, return_mean: bool = True):
         if any([len(self._solution[r]) != 3 for r in range(self.n_rooms)]):
             raise Exception("Solution empty or incomplete. Consider running the solve method first.")
         room_utilities = np.zeros(self.n_rooms)
         for r in range(self.n_rooms):
             (i, j, k) = self._solution[r]
-            room_utilities[r] = self.utilities[i, j] + self.utilities[j, k] + self.utilities[k, i]
+            room_utilities[r] = self.utilities[[i, j, k]][:, [i, j, k]].sum()
         
-        if verbose:
-            return sum(room_utilities), room_utilities
+        if return_mean:
+            return mean(room_utilities)
         else:
-            return sum(room_utilities)
+            return room_utilities
         
     def evaluate_agentwise(self) -> np.ndarray:
         if any([len(self._solution[r]) != 3 for r in range(self.n_rooms)]):
@@ -70,16 +73,16 @@ class solver_base(object):
         
     def evaluate_and_display(self, verbose: int = 0):
         if verbose:
-            total, room_ut = self.evaluate(verbose=verbose)
+            total, room_ut = self.evaluate(return_mean=verbose)
             print("Total utilitarian welfare:", total)
             for r in range(self.n_rooms):
                 print(f"Room {r+1}: {room_ut[r]}")
         else:
-            total = self.evaluate(verbose=verbose)
+            total = self.evaluate(return_mean=verbose)
             print("Total utilitarian welfare:", total)
         
     
-class room_serial_dictatorship(solver_base):
+class SD_by_rooms(solver_base):
     '''Agents will iteratively choose the room they prefer. 
     
     If a room isn't full when they join, they will evaluate the vacancies based on the average utilities of the remaining agents

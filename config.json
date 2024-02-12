@@ -4,12 +4,16 @@
         "room_nums": [2, 5, 15, 20, 30, 50],
         "noise_list": [3, 10, 20],
         "init_noise": 3,
-        "solver_list": ["random_serial_dictatorship", "match_by_characteristics", "random_match"]
+        "solver_list": ["serial_dictatorship", "match_by_characteristics", "SD_by_rooms", "random_match"],
+        "steps": [1, 2, 3]
     },
     "GraphOptions": {
-        "n_rows": 2,
-        "n_cols": 3,
+        "rooms_n_rows": 2,
+        "rooms_n_cols": 3,
+        "noise_n_rows": 1,
+        "noise_n_cols": 3,
         "save_not_show": true,
+        "use_title": false,
         "dpi": 300
     }
 }
