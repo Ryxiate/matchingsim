@@ -17,13 +17,13 @@ if __name__ == "__main__":
     with open("./config.json", "r") as f:
         config = json.load(f)
 
+    steps = config["SimulationOptions"]["steps"]
     iter_num = config["SimulationOptions"]["iter_num"]
     room_nums = config["SimulationOptions"]["room_nums"]
     noise_list = config["SimulationOptions"]["noise_list"]
     init_noise = config["SimulationOptions"]["init_noise"]
     solver_list = check_solver_validity(config["SimulationOptions"]["solver_list"])
-    steps = config["SimulationOptions"]["steps"]
-    eval_techniques = [t for (t, s) in config["SimulationOptions"]["EvaluateTechniques"].items() if s]
+    eval_techniques = check_evaluator_validity(config["SimulationOptions"]["eval_list"])
     
     rooms_n_rows = config["GraphOptions"]["rooms_n_rows"]
     rooms_n_cols = config["GraphOptions"]["rooms_n_cols"]
@@ -32,8 +32,8 @@ if __name__ == "__main__":
     save_not_show = config["GraphOptions"]["save_not_show"]
     dpi = config["GraphOptions"]["dpi"]
     use_title = config["GraphOptions"]["use_title"]
-    small_figure_size = tuple(config["GraphOptions"]["small_figure_size"].values())
-    large_figure_size = tuple(config["GraphOptions"]["large_figure_size"].values())
+    small_figure_ratio = tuple(config["GraphOptions"]["small_figure_ratio"].values())
+    large_figure_ratio = tuple(config["GraphOptions"]["large_figure_ratio"].values())
     
     if rooms_n_rows * rooms_n_cols != len(room_nums):
         raise Exception("Subplot arrangements have different size than the room number list")
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         
         pbar.close()
         
-        plt.figure(figsize=small_figure_size)
+        plt.figure(figsize=small_figure_ratio)
         # Average utilitarian welfare
         for k in solver_list:
             plt.plot(room_nums, results[k], label=k)
@@ -79,13 +79,14 @@ if __name__ == "__main__":
         plt.legend()
         if use_title:
             plt.title("Average Utilitarian Welfare by Different Algorithms")
+        plt.tight_layout(pad=0.2)
         if save_not_show:
             plt.savefig("figure/default.png", dpi=dpi, bbox_inches="tight")
             plt.close()
         else:
             plt.show()
         
-        plt.figure(figsize=large_figure_size)
+        plt.figure(figsize=large_figure_ratio)
         # Individual utilitarian welfare
         ss = ["serial_dictatorship", "SD_by_rooms"]
         ss_valid = [s for s in ss if s in solver_list]
@@ -99,10 +100,11 @@ if __name__ == "__main__":
                 plt.ylabel("Individual Utilities")
                 if ss_cnt > 1:
                     plt.legend()
-                    
+        
         if ss_cnt:
             if use_title:
                 plt.suptitle(f"Sequential Individual Utilitarian Welfare by {s}", fontsize=16)
+            plt.tight_layout(pad=0.2)
             if save_not_show:
                 plt.savefig("figure/serial.png", dpi=dpi, bbox_inches="tight")
                 plt.close()
@@ -111,7 +113,7 @@ if __name__ == "__main__":
         
         # Utility histogram
         for s in solver_list:
-            plt.figure(figsize=large_figure_size)
+            plt.figure(figsize=large_figure_ratio)
             for idx, nr in enumerate(room_nums):
                 ax = plt.subplot(rooms_n_rows, rooms_n_cols, idx+1)
                 ax.hist(hist_res[s][nr])
@@ -120,6 +122,7 @@ if __name__ == "__main__":
                 plt.ylabel("Individual Utilities")
             if use_title:
                 plt.suptitle(f"Individual Utilitarian Welfare Distribution by {s}", fontsize=16)
+            plt.tight_layout(pad=0.2)
             if save_not_show:
                 plt.savefig(f"figure/{s}_hist.png", dpi=dpi, bbox_inches="tight")
                 plt.close()
@@ -152,7 +155,7 @@ if __name__ == "__main__":
                     results[noise][k].append(v)
         pbar.close()
         
-        plt.figure(figsize=large_figure_size)
+        plt.figure(figsize=large_figure_ratio)
         for idx, noise in enumerate(noise_list):
             ax = plt.subplot(noise_n_rows, noise_n_cols, idx+1)
             for s in solver_list:
@@ -162,6 +165,7 @@ if __name__ == "__main__":
             plt.legend()
         if use_title:
             plt.suptitle("Average Utilitarian Welfare under Different Noise", fontsize=16)
+        plt.tight_layout(pad=0.2)
         if save_not_show:
             plt.savefig("figure/noise.png", dpi=dpi, bbox_inches="tight")
             plt.close()
@@ -198,7 +202,7 @@ if __name__ == "__main__":
                     results[i][k].append(v)
         pbar.close()
         
-        plt.figure(figsize=large_figure_size)
+        plt.figure(figsize=large_figure_ratio)
         for idx, name in enumerate(["vanilla", "with one-directional bias", "with indifference", "with bias and indifference"]):
             ax = plt.subplot(2, 2, idx+1)
             for s in solver_list:
@@ -208,6 +212,7 @@ if __name__ == "__main__":
             plt.legend()
         if use_title:
             plt.suptitle("Average Utilitarian Welfare under Different Data Scenarios", fontsize=16)
+        plt.tight_layout(pad=0.2)
         if save_not_show:
             plt.savefig("figure/scenarios.png", dpi=dpi, bbox_inches="tight")
             plt.close()
@@ -244,7 +249,7 @@ if __name__ == "__main__":
         eval_title_corr = {"preference_swapper": ("Proportional Utilitarian Welfare Improvements After Swapping", "Proportional Utility Improvement", "swap"),
                       "ttc_evaluator": ("Minimum Alpha for No Top Trading Cycles", "Minimum Alpha", "ttc")}
         for (t, (title, y_title, tn)) in eval_title_corr.items():
-            plt.figure(figsize=small_figure_size)
+            plt.figure(figsize=small_figure_ratio)
             for s in solver_list:
                 plt.plot(room_nums, results[t][s], label=s)
             plt.xlabel("Room Numbers")
@@ -252,6 +257,7 @@ if __name__ == "__main__":
             plt.legend()
             if use_title:
                 plt.title(title, fontsize=16)
+            plt.tight_layout(pad=0.2)
             if save_not_show:
                 plt.savefig(f"figure/{tn}.png", dpi=dpi, bbox_inches="tight")
                 plt.close()

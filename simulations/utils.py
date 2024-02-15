@@ -3,11 +3,25 @@ import numpy as np
 __all_solvers = ["SD_by_rooms", "serial_dictatorship", "random_serial_dictatorship", 
                  "match_by_characteristics", "random_match"]
 
-def check_solver_validity(solver_list: list[str]):
+__all_evaluators = ["preference_swapper", "ttc_evaluator"]
+
+def check_solver_validity(solver_list: list[str], quiet: bool = False):
     for solver in solver_list:
         if solver not in __all_solvers:
-            raise NameError(f"Solver name {solver} is invalid. Valid solvers are {__all_solvers}.")
+            if quiet:
+                solver_list.remove(solver)
+            else:
+                raise NameError(f"Solver name {solver} is invalid. Valid solvers are {__all_solvers}.")
     return solver_list
+
+def check_evaluator_validity(eval_list: list[str], quiet: bool = False):
+    for evaluator in eval_list:
+        if evaluator not in __all_evaluators:
+            if quiet:
+                eval_list.remove(evaluator)
+            else:
+                raise NameError(f"Evaluator name {evaluator} is invalid. Valid evaluators are {__all_evaluators}.")
+    return eval_list
 
 def rbf(dist: float, c: float = 25):
     return c * np.exp(-dist**2/c)
