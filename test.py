@@ -1,28 +1,21 @@
 from simulations import *
 
-inst = geo_3dsr.get_instance(pref_premium=1, rooms=3, asymmetric_noise=True, groups_allowed=True, groups_p=1)
-# print(inst.utilities)
-solver = random_match(inst)
-solver.solve()
-print(inst.preferences)
-print(solver.evaluate())
+# inst = geo_3dsr.get_instance(pref_premium=1, rooms=3, asymmetric_noise=True, groups_allowed=True, groups_p=1, p=0)
+for _ in range(10):
+    inst = geo_3dsr.get_instance(rooms=20, asymmetric_noise=True)
+    # print(inst.utilities)
+    solver = match_by_characteristics(inst)
+    solver.solve()
+    evaluator = preference_swapper.from_solver(solver)
+    print(evaluator.evaluate())
+# print(inst.preferences)
+# print(solver.evaluate())
 
 # swapper = preference_swapper.from_solver(solver)
-# print(swapper.utilities_after_swap())
+# print(swapper.utilities_after_swap(verbose=1))
 
-print(solver.utilities)
-print(solver.solution)
-
-evaluator = ttg_evaluator.from_solver(solver)
-print({u: [x[0] for x in l] for (u, l) in evaluator._build_trading_graph().items()})
-# evaluator._ttg = {0: [(1, 1)],
-#                   1: [(4, 1)],
-#                   2: [], 3: [],
-#                   4: [(1, 1)],
-#                   5: [], 6: [],
-#                   7: [], 8: []}
-print(evaluator._find_cycle())
-print(evaluator.evaluate())
+# print(solver.utilities)
+# print(solver.solution)
 
 
 # print(ins.revealed_utilities)

@@ -107,8 +107,8 @@ class geo_3dsr(object):
         return self._factors.copy()
     
     @classmethod       
-    def get_instance(cls, /, rooms: int = 10, n_factors: int = 5, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 1, pref_premium: float = 0.5, 
-                     p: float = 0.7, lim_prop: float = 0.5, groups_allowed: bool = False, groups_p: float = 0.3, quiet: bool = False, asymmetric_noise: bool = False):
+    def get_instance(cls, /, rooms: int = 10, n_factors: int = 5, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 3, pref_premium: float = 0.6, 
+                     p: float = 0.75, lim_prop: float = 0.5, groups_allowed: bool = True, groups_p: float = 0.3, quiet: bool = False, asymmetric_noise: bool = False):
         '''Generates an instance of Geometric 3D-SR
         :param rooms: number of rooms (there will be 3*rooms agents)
         :param n_factors: number of factors

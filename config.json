@@ -1,11 +1,15 @@
 {
-    "SimulationOptions":{
+    "SimulationOptions": {
         "iter_num": 100,
         "room_nums": [2, 5, 15, 20, 30, 50],
         "noise_list": [3, 10, 20],
         "init_noise": 3,
         "solver_list": ["serial_dictatorship", "match_by_characteristics", "SD_by_rooms", "random_match"],
-        "steps": [1, 2, 3]
+        "steps": [1, 2, 3, 4],
+        "EvaluateTechniques": {
+            "preference_swapper": true,
+            "ttc_evaluator": true
+        }
     },
     "GraphOptions": {
         "rooms_n_rows": 2,
@@ -14,6 +18,14 @@
         "noise_n_cols": 3,
         "save_not_show": true,
         "use_title": false,
-        "dpi": 300
+        "dpi": 300,
+        "small_figure_ratio": {
+            "width": 8,
+            "height": 5
+        },
+        "large_figure_ratio": {
+            "width": 14,
+            "height": 8
+        }
     }
 }

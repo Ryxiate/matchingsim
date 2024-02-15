@@ -1,5 +1,14 @@
 import numpy as np
 
+__all_solvers = ["SD_by_rooms", "serial_dictatorship", "random_serial_dictatorship", 
+                 "match_by_characteristics", "random_match"]
+
+def check_solver_validity(solver_list: list[str]):
+    for solver in solver_list:
+        if solver not in __all_solvers:
+            raise NameError(f"Solver name {solver} is invalid. Valid solvers are {__all_solvers}.")
+    return solver_list
+
 def rbf(dist: float, c: float = 25):
     return c * np.exp(-dist**2/c)
 
