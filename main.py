@@ -24,6 +24,7 @@ if __name__ == "__main__":
     init_noise = config["SimulationOptions"]["init_noise"]
     solver_list = check_solver_validity(config["SimulationOptions"]["solver_list"])
     eval_techniques = check_evaluator_validity(config["SimulationOptions"]["eval_list"])
+    pref_dist = config["SimulationOptions"]["pref_dist"]
     
     rooms_n_rows = config["GraphOptions"]["rooms_n_rows"]
     rooms_n_cols = config["GraphOptions"]["rooms_n_cols"]
@@ -51,8 +52,9 @@ if __name__ == "__main__":
         for n_rooms in room_nums:
             n_agents = 3 * n_rooms
             res = {s: [] for s in solver_list}
+            pbar.set_postfix({"n_rooms": n_rooms})
             for iter in range(iter_num):
-                inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True)
+                inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True, pref_dist=pref_dist)
 
                 for s in solver_list:
                     solver: solver_base = eval(s)(inst=inst)
@@ -138,10 +140,11 @@ if __name__ == "__main__":
         pbar = tqdm(total=iter_num*len(noise_list)*len(room_nums)*len(solver_list), desc=f"Matching rooms under different noise (Step {step}/{steps_num})")
         for noise in noise_list:
             for n_rooms in room_nums:
+                pbar.set_postfix({"noise": noise, "n_rooms": n_rooms})
                 n_agents = 3 * n_rooms
                 res = {s: [] for s in solver_list}
                 for iter in range(iter_num):
-                    inst = geo_3dsr.get_instance(rooms=n_rooms, noise=noise, quiet=True, asymmetric_noise=True)
+                    inst = geo_3dsr.get_instance(rooms=n_rooms, noise=noise, quiet=True, asymmetric_noise=True, pref_dist=pref_dist)
 
                     for s in solver_list:
                         solver: solver_base = eval(s)(inst=inst)
@@ -180,10 +183,11 @@ if __name__ == "__main__":
         pbar = tqdm(total=4*iter_num*len(room_nums)*len(solver_list), desc=f"Matching rooms under different scenarios (Step {step}/{steps_num})")
         for i in range(4):
             for n_rooms in room_nums:
+                pbar.set_postfix({"Scenario": i+1, "n_rooms": n_rooms})
                 n_agents = 3 * n_rooms
                 res = {s: [] for s in solver_list}
                 for iter in range(iter_num):
-                    inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True)
+                    inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True, pref_dist=pref_dist)
                     if i % 2:
                         inst.factor_bias()
                     if i // 2:
@@ -227,10 +231,11 @@ if __name__ == "__main__":
         pbar = tqdm(total=len(eval_techniques)*iter_num*len(room_nums)*len(solver_list), 
                     desc=f"Evaluating solver performance with chosen techniques (Step {step}/{steps_num})")
         for n_rooms in room_nums:
+            pbar.set_postfix({"n_rooms": n_rooms})
             n_agents = 3 * n_rooms
             res = {t: {s: [] for s in solver_list} for t in eval_techniques}
             for iter in range(iter_num):
-                inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True)
+                inst = geo_3dsr.get_instance(rooms=n_rooms, noise=init_noise, quiet=True, asymmetric_noise=True, pref_dist=pref_dist)
 
                 for s in solver_list:
                     solver: solver_base = eval(s)(inst=inst)

@@ -21,8 +21,8 @@ class geo_3dsr(object):
     3. `utilities`: true utilities computed from `_utility_matrix + _noise_matrix`, used for evaluation
     4. `revealed_utilities`: utilities that agents perceive before matching, used for matching
     '''
-    def __init__(self, factors: np.ndarray, high: int, kernel: str, c: float, noise: float, pref_premium: float, p: float, lim_prop: float, 
-                 groups_p: float, groups_allowed: bool, quiet: bool, asymmetric_noise: bool):
+    def __init__(self, factors: np.ndarray, high: int, kernel: str, c: float, noise: float, pref_premium: float, pref_dist: str, p: float, 
+                 lim_prop: float, groups_p: float, groups_allowed: bool, quiet: bool, asymmetric_noise: bool):
         self._factors = factors
         self._h = high
         (self.n_agents, self.n_factors) = factors.shape
@@ -38,24 +38,35 @@ class geo_3dsr(object):
         else:
             raise Exception(f"Unrecognized kernel function: {kernel}")
 
-        self._gen_preferences(p=p, lim_p=lim_prop, groups_allowed=groups_allowed, groups_p=groups_p)
+        self._gen_preferences(pref_dist=pref_dist, p=p, lim_p=lim_prop, groups_allowed=groups_allowed, groups_p=groups_p)
         self._update_utilities(kernel_func=self._kernel_func, c=self.c, noise=self.noise, quiet=self.quiet, resample_noise=True, asymmetric_noise=self.asy)
         self._pref_premium = pref_premium * np.maximum(self._utility_matrix + self._noise_matrix, 0).sum() / (self.n_agents * (self.n_agents - 1))
     
-    def _gen_preferences(self, p: float, lim_p: float, groups_allowed: bool, groups_p: float):
+    def _gen_preferences(self, pref_dist: str, p: float, lim_p: float, groups_allowed: bool, groups_p: float):
         lim_p = min(max(lim_p, 0), 1)
         p = min(max(p, 0), 1)
         
         self._preferences: set[tuple] = set()
         all_agents = list(range(self.n_agents))
-        while len(self._preferences) < self.n_agents / 3 * lim_p:
-            num = 3 if groups_allowed and random.random() <= groups_p else 2
-            pref_agents = random.sample(all_agents, num)
-            self._preferences.add(tuple(pref_agents))
-            for a in pref_agents:
-                all_agents.remove(a)
-            if random.random() > p:
-                break
+        if pref_dist == "geo":
+            while len(self._preferences) < self.n_agents / 3 * lim_p:
+                num = 3 if groups_allowed and random.random() <= groups_p else 2
+                pref_agents = random.sample(all_agents, num)
+                self._preferences.add(tuple(pref_agents))
+                for a in pref_agents:
+                    all_agents.remove(a)
+                if random.random() > p:
+                    break
+        elif pref_dist == "uniform":
+            num_pref = max(int(random.random() * self.n_agents / 3 * lim_p), min(self.n_agents/ 3 - 1, 1))
+            for _ in range(num_pref):
+                num = 3 if groups_allowed and random.random() <= groups_p else 2
+                pref_agents = random.sample(all_agents, num)
+                self._preferences.add(tuple(pref_agents))
+                for a in pref_agents:
+                    all_agents.remove(a)
+        else:
+            raise NameError(f"Invalid preference distribution. Expected 'geo' or 'uniform'. Got {pref_dist}.")
             
         self._pref_matrix = np.zeros((self.n_agents, self.n_agents))
         for agents in self._preferences:
@@ -108,7 +119,8 @@ class geo_3dsr(object):
     
     @classmethod       
     def get_instance(cls, /, rooms: int = 10, n_factors: int = 5, high: int = 7, kernel: str = "rbf", c: float = 25, noise: float = 3, pref_premium: float = 0.6, 
-                     p: float = 0.75, lim_prop: float = 0.5, groups_allowed: bool = True, groups_p: float = 0.3, quiet: bool = False, asymmetric_noise: bool = False):
+                     pref_dist: str = "geo", p: float = 0.75, lim_prop: float = 0.5, groups_allowed: bool = True, groups_p: float = 0.3, quiet: bool = False, 
+                     asymmetric_noise: bool = False):
         '''Generates an instance of Geometric 3D-SR
         :param rooms: number of rooms (there will be 3*rooms agents)
         :param n_factors: number of factors
@@ -117,7 +129,8 @@ class geo_3dsr(object):
         :param c: parameter for the kernel function
         :param noise: Gaussian noise scale when calculating noise for utilities
         :param pref_premium: preference premium markup on utilities based on the average utilities across all agents
-        :param p: probability of generating preferences
+        :param pref_dist: preference number distribution style, chosen from [`"geo"`, `"uniform"`].
+        :param p: probability of generating the next preferences, ignored if `pref_dist` is `"uniform"`
         :param lim_prop: limits of proportion of people to have preferences
         :param groups_allowed: whether to be able to generate a group (3-person) preferences
         :param groups_p: probability of generating a group preferences. Ignored if `groups_allowed` is set to false
@@ -127,7 +140,7 @@ class geo_3dsr(object):
         '''
         factors = generate_factors(rooms=rooms, n_factors=n_factors, high=high)
         return cls(factors=factors, high=high, kernel=kernel, c=c, noise=noise, quiet=quiet, asymmetric_noise=asymmetric_noise, pref_premium=pref_premium,
-                   p=p, lim_prop=lim_prop, groups_p=groups_p, groups_allowed=groups_allowed)
+                   pref_dist=pref_dist, p=p, lim_prop=lim_prop, groups_p=groups_p, groups_allowed=groups_allowed)
     
     def factor_bias(self, bias_num: int = 1, bias_scale: int = 5, no_update: bool = True):
         '''Applies a random bias on a random factor for the Geo 3D-SR instance

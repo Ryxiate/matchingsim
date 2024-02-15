@@ -1,12 +1,13 @@
 {
     "SimulationOptions": {
-        "steps": [1, 2, 3, 4],
+        "steps": [4],
         "iter_num": 100,
         "room_nums": [2, 5, 15, 20, 30, 50],
         "noise_list": [3, 10, 20],
         "init_noise": 3,
         "solver_list": ["serial_dictatorship", "match_by_characteristics", "SD_by_rooms", "random_match"],
-        "eval_list": ["preference_swapper", "ttc_evaluator"]
+        "eval_list": ["preference_swapper", "ttc_evaluator"],
+        "pref_dist": "uniform"
     },
     "GraphOptions": {
         "rooms_n_rows": 2,
