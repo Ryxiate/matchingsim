@@ -7,7 +7,7 @@
         "init_noise": 3,
         "solver_list": ["serial_dictatorship", "match_by_characteristics", "SD_by_rooms", "random_match"],
         "eval_list": ["preference_swapper", "ttc_evaluator"],
-        "pref_dist": "uniform"
+        "pref_dist": "geo"
     },
     "GraphOptions": {
         "rooms_n_rows": 2,
