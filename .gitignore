@@ -1,3 +1,5 @@
+# Figure data generated
 *.png
-test.ipynb
-test.py
+
+# Python environment
+.venv

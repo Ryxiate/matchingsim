@@ -8,9 +8,6 @@ import json
 
 warnings.filterwarnings("error")
 
-# TODO
-# - swap: top trading cycle
-
 if __name__ == "__main__":
     steps_num = 4
     # Load configurations
@@ -260,6 +257,8 @@ if __name__ == "__main__":
             plt.xlabel("Room Numbers")
             plt.ylabel(y_title)
             plt.legend()
+            if t == "ttc_evaluator":
+                plt.axvline(x=1, ymin=0, ymax=max(room_nums), label="Baseline (alpha = 1)")
             if use_title:
                 plt.title(title, fontsize=16)
             plt.tight_layout(pad=0.2)

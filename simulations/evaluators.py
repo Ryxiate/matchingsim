@@ -163,9 +163,9 @@ class ttc_evaluator(eval_base):
                     a_rms = tuple(self.solution[ator[agent]]-{agent})
                     o_rms = tuple(self.solution[ator[oth]]-{oth})
                     o_ut = self._utilities[agent, a_rms[0]] + self._utilities[agent, a_rms[1]]
-                    if o_ut:    # Avoid division by 0
+                    if o_ut:    # Avoid division by 0 (considered as alpha = 1)
                         alpha = (self._utilities[agent, o_rms[0]] + self._utilities[agent, o_rms[1]]) / (self._utilities[agent, a_rms[0]] + self._utilities[agent, a_rms[1]])
-                        if alpha:
+                        if alpha > 1:
                             graph[agent].append((oth, alpha))
         self._ttg = graph
         return graph
