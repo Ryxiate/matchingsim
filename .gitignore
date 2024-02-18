@@ -3,3 +3,6 @@
 
 # Python environment
 .venv
+
+# Other files to ignore
+ignored

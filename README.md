@@ -76,12 +76,9 @@ __eval_list__: list of evaluation techniques to use in step 4. The available opt
 ]
 ```
 __pref_dist__: method for preferences to generate. The available options:
-```json
-[
-    "geo",      // number of preferences will follow geometric distribution with a limit linearly related with the number of rooms
-    "uniform"   // number of preferences will be uniformly distributed from 1 to the limit linearly related with the number of rooms
-]
-```
+- "geo": number of preferences will follow geometric distribution with a limit linearly related with the number of rooms
+- "uniform": number of preferences will be uniformly distributed from 1 to the limit linearly related with the number of rooms
+
 ### GraphOptions
 __(rooms_n_rows, rooms_n_cols)__: arrangements for subplots indexed by different room numbers. Must satisfy rooms_n_rows * rooms_n_cols = len(room_nums)
 
