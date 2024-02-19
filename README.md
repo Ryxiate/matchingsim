@@ -18,16 +18,21 @@ git clone https://github.com/Ryxiate/matchingsim.git
 
 2. \[Optional\] Open the `config.json` file to tweak the simulation parameters.
 
-3. Setup the virtua env:
+3. Setup the virtual env:
 
 ```bash
 python3 -m venv .venv
-
-# For Linux users
+```
+For linux users
+```bash
 source .venv/bin/activate
-# For Windows users
+```
+For Windows users
+```bash
 .venv\Scripts\activate.bat
-
+```
+Install the required packages
+```bash
 pip install -r requirements.txt
 ```
 

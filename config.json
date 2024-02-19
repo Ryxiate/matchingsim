@@ -1,6 +1,6 @@
 {
     "SimulationOptions": {
-        "steps": [4],
+        "steps": [1, 2, 3, 4],
         "iter_num": 100,
         "room_nums": [2, 5, 15, 20, 30, 50],
         "noise_list": [3, 10, 20],
